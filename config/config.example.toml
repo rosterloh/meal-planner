@@ -35,3 +35,9 @@ min_rating = 3.0
 plan_days = 7
 # Tags that indicate quick/easy meals for busy days
 quick_meal_tags = ["quick", "30-minutes", "weeknight"]
+
+[telemetry]
+# OTLP endpoint for exporting traces
+otlp_endpoint = "http://localhost:4317"
+# Application tag for telemetry
+app_name = "meal-planner"

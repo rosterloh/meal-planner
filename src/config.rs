@@ -7,6 +7,7 @@ pub struct AppConfig {
     pub mealie: MealieConfig,
     pub memory: MemoryConfig,
     pub planning: PlanningConfig,
+    pub telemetry: TelemetryConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -55,6 +56,15 @@ pub struct PlanningConfig {
     pub plan_days: u32,
     /// Tags/categories for quick weeknight meals
     pub quick_meal_tags: Vec<String>,
+}
+
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TelemetryConfig {
+    /// OTLP endpoint for exporting traces
+    pub otlp_endpoint: String,
+    /// Application tag for telemetry
+    pub app_name: String,
 }
 
 impl AppConfig {

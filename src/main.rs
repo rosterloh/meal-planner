@@ -3,37 +3,40 @@ mod config;
 mod llm;
 mod mealie;
 mod memory;
+mod telemetry;
 mod tools;
 
 use anyhow::Result;
+use opentelemetry::trace::TracerProvider;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
-use tracing_subscriber::EnvFilter;
+use tracing::{info, error};
 
 use crate::agent::Agent;
 use crate::config::AppConfig;
 use crate::llm::LlmClient;
 use crate::mealie::MealieClient;
 use crate::memory::MealMemory;
+use crate::telemetry::{init_logger_provider, init_tracer_provider, init_tracing_subscriber};
 use crate::tools::ToolExecutor;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialise tracing (set RUST_LOG=info or debug)
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-
     // Load config
     let config_path = std::env::args()
         .nth(1)
         .unwrap_or_else(|| "config.toml".to_string());
     let config = AppConfig::load(&config_path)?;
 
-    println!("meal-planner v{}", env!("CARGO_PKG_VERSION"));
-    println!("  LLM provider: {}", config.llm.provider);
-    println!("  Mealie:       {}", config.mealie.base_url);
-    println!();
+    let tracer_provider = init_tracer_provider(&config.telemetry);
+    let tracing_layer_tracer = tracer_provider.tracer(config.telemetry.app_name.clone());
+    init_logger_provider(&config.telemetry);
+    // init_meter_provider(&config.telemetry);
+    init_tracing_subscriber(tracing_layer_tracer);
+
+    info!("meal-planner v{}", env!("CARGO_PKG_VERSION"));
+    info!("  LLM provider: {}", config.llm.provider);
+    info!("  Mealie:       {}\n", config.mealie.base_url);
 
     // Initialise components
     let llm = LlmClient::from_config(&config.llm)?;
@@ -57,9 +60,8 @@ async fn main() -> Result<()> {
         let _ = rl.load_history(path);
     }
 
-    println!("Ready! Ask me to plan your meals for the week.");
-    println!("Commands: /reset (clear conversation), /quit (exit)");
-    println!();
+    info!("Ready! Ask me to plan your meals for the week.");
+    info!("Commands: /reset (clear conversation), /quit (exit)\n");
 
     loop {
         let readline = rl.readline("you> ");
@@ -76,7 +78,7 @@ async fn main() -> Result<()> {
                     "/quit" | "/exit" => break,
                     "/reset" => {
                         agent.reset();
-                        println!("Conversation reset.\n");
+                        info!("Conversation reset.\n");
                         continue;
                     }
                     _ => {}
@@ -84,16 +86,16 @@ async fn main() -> Result<()> {
 
                 match agent.chat(input).await {
                     Ok(response) => {
-                        println!("\nassistant> {response}\n");
+                        info!("\nassistant> {response}\n");
                     }
                     Err(e) => {
-                        eprintln!("\nError: {e}\n");
+                        error!("\nError: {e}\n");
                     }
                 }
             }
             Err(ReadlineError::Interrupted | ReadlineError::Eof) => break,
             Err(e) => {
-                eprintln!("Input error: {e}");
+                error!("Input error: {e}");
                 break;
             }
         }
@@ -103,6 +105,6 @@ async fn main() -> Result<()> {
         let _ = rl.save_history(path);
     }
 
-    println!("Goodbye!");
+    info!("Goodbye!");
     Ok(())
 }
