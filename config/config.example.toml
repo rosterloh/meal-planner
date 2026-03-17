@@ -1,0 +1,37 @@
+# meal-planner configuration
+# Copy to config.toml and adjust for your setup.
+
+[llm]
+# "local" for llama.cpp, "cloud" for a remote OpenAI-compatible API
+provider = "local"
+
+[llm.local]
+# llama.cpp server with --port 8080
+base_url = "http://localhost:8080/v1"
+# Model name (llama.cpp reports this in /v1/models)
+model = "qwen2.5-14b-q4_k_m"
+
+[llm.cloud]
+# Any OpenAI-compatible endpoint. For Anthropic you'd need a
+# separate adapter or the rig crate — this slot is for providers
+# that speak the OpenAI chat completions protocol.
+base_url = "https://api.openai.com/v1"
+model = "gpt-4o-mini"
+api_key_env = "OPENAI_API_KEY"
+
+[mealie]
+base_url = "http://mealie.local:9925"
+api_token_env = "MEALIE_API_TOKEN"
+
+[memory]
+db_path = "data/meals.db"
+
+[planning]
+# Don't repeat a meal within this many days
+repeat_cooldown_days = 14
+# Only suggest recipes rated at least this
+min_rating = 3.0
+# Days to plan (Mon-Sun evening meals)
+plan_days = 7
+# Tags that indicate quick/easy meals for busy days
+quick_meal_tags = ["quick", "30-minutes", "weeknight"]
